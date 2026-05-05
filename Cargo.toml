@@ -11,10 +11,6 @@ documentation = "https://docs.rs/wavefront-obj-io"
 keywords = ["wavefront", "obj", "parser", "geometry", "mesh"]
 categories = ["parser-implementations", "encoding", "graphics"]
 
-exclude = [
-    "tests/fixtures/*",
-]
-
 [package.metadata.docs.rs]
 all-features = true
 
