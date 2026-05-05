@@ -1,6 +1,6 @@
 [package]
 name = "wavefront-obj-io"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Streaming, callback-based Wavefront OBJ reader and writer with matched read/write traits"
 repository = "https://github.com/francisdb/wavefront-obj-io"
