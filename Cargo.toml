@@ -1,0 +1,25 @@
+[package]
+name = "wavefront-obj-io"
+version = "0.1.0"
+edition = "2024"
+description = "Streaming, callback-based Wavefront OBJ reader and writer with matched read/write traits"
+repository = "https://github.com/francisdb/wavefront-obj-io"
+readme = "README.md"
+license = "MIT"
+documentation = "https://docs.rs/wavefront-obj-io"
+
+keywords = ["wavefront", "obj", "parser", "geometry", "mesh"]
+categories = ["parser-implementations", "encoding", "graphics"]
+
+exclude = [
+    "testdata/*",
+]
+
+[package.metadata.docs.rs]
+all-features = true
+
+[dependencies]
+itoa = "1.0.15"
+
+[dev-dependencies]
+pretty_assertions = "1.4.1"
