@@ -12,7 +12,7 @@ keywords = ["wavefront", "obj", "parser", "geometry", "mesh"]
 categories = ["parser-implementations", "encoding", "graphics"]
 
 exclude = [
-    "testdata/*",
+    "tests/fixtures/*",
 ]
 
 [package.metadata.docs.rs]

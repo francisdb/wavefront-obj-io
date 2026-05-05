@@ -572,6 +572,11 @@ impl<W: io::Write, F: ObjFloat> IoObjWriter<W, F> {
         self.printf_f_format = enabled;
     }
 
+    /// Consume the writer and return the underlying sink.
+    pub fn into_inner(self) -> W {
+        self.out
+    }
+
     #[inline]
     fn push_str(&mut self, s: &str) {
         self.line_buf.extend_from_slice(s.as_bytes());
@@ -792,22 +797,6 @@ mod tests {
     }
 
     #[test]
-    fn test_obj_reading() {
-        // read testdata/screw.obj using TestObjReader
-        let obj_data = include_str!("../testdata/screw_f64.obj");
-        let cursor = Cursor::new(obj_data);
-        let mut reader: TestObjReader64 = Default::default();
-        read_obj_file(cursor, &mut reader).unwrap();
-        // this does not check correctness and ordering of data, just that all data was read
-        assert_eq!(reader.comments.len(), 3);
-        assert_eq!(reader.names.len(), 1);
-        assert_eq!(reader.vertices.len(), 41);
-        assert_eq!(reader.texture_coordinates.len(), 41);
-        assert_eq!(reader.normals.len(), 41);
-        assert_eq!(reader.faces.len(), 48);
-    }
-
-    #[test]
     fn test_obj_reading_2() {
         let input = "# This is a test OBJ file
 o TestObject
@@ -868,49 +857,6 @@ f 1/1/1 2/2/2 3/3/3
         assert_eq!(output, expected_output);
     }
 
-    struct WritingReader64 {
-        writer: IoObjWriter<Vec<u8>>,
-    }
-    impl ObjReader for WritingReader64 {
-        fn read_comment(&mut self, comment: &str) {
-            self.writer.write_comment(comment).unwrap();
-        }
-
-        fn read_object_name(&mut self, name: &str) {
-            self.writer.write_object_name(name).unwrap();
-        }
-
-        fn read_vertex(&mut self, x: f64, y: f64, z: f64, w: Option<f64>) {
-            self.writer.write_vertex(x, y, z, w).unwrap();
-        }
-
-        fn read_texture_coordinate(&mut self, u: f64, v: Option<f64>, w: Option<f64>) {
-            self.writer.write_texture_coordinate(u, v, w).unwrap();
-        }
-
-        fn read_normal(&mut self, nx: f64, ny: f64, nz: f64) {
-            self.writer.write_normal(nx, ny, nz).unwrap();
-        }
-
-        fn read_face(&mut self, vertex_indices: &[(usize, Option<usize>, Option<usize>)]) {
-            self.writer.write_face(vertex_indices).unwrap();
-        }
-    }
-
-    #[test]
-    fn test_obj_read_write_compare_64() {
-        // git might change line endings as they are text files, so normalize to \n
-        let obj_data = include_str!("../testdata/screw_f64.obj").replace("\r\n", "\n");
-        let cursor = Cursor::new(&obj_data);
-        // Default full-precision writer is enough to round-trip the test fixture.
-        let writer: IoObjWriter<_, f64> = IoObjWriter::new(Vec::new());
-        let mut reader = WritingReader64 { writer };
-        read_obj_file(cursor, &mut reader).unwrap();
-
-        let output = String::from_utf8(reader.writer.out).unwrap();
-        assert_eq!(output, obj_data);
-    }
-
     // Tests for f32 support
 
     #[derive(Default)]
@@ -937,35 +883,6 @@ f 1/1/1 2/2/2 3/3/3
         }
 
         fn read_face(&mut self, _vertex_indices: &[(usize, Option<usize>, Option<usize>)]) {}
-    }
-
-    struct WritingReader32 {
-        writer: IoObjWriter<Vec<u8>, f32>,
-    }
-    impl ObjReader<f32> for WritingReader32 {
-        fn read_comment(&mut self, comment: &str) {
-            self.writer.write_comment(comment).unwrap();
-        }
-
-        fn read_object_name(&mut self, name: &str) {
-            self.writer.write_object_name(name).unwrap();
-        }
-
-        fn read_vertex(&mut self, x: f32, y: f32, z: f32, w: Option<f32>) {
-            self.writer.write_vertex(x, y, z, w).unwrap();
-        }
-
-        fn read_texture_coordinate(&mut self, u: f32, v: Option<f32>, w: Option<f32>) {
-            self.writer.write_texture_coordinate(u, v, w).unwrap();
-        }
-
-        fn read_normal(&mut self, nx: f32, ny: f32, nz: f32) {
-            self.writer.write_normal(nx, ny, nz).unwrap();
-        }
-
-        fn read_face(&mut self, vertex_indices: &[(usize, Option<usize>, Option<usize>)]) {
-            self.writer.write_face(vertex_indices).unwrap();
-        }
     }
 
     #[test]
@@ -1097,32 +1014,6 @@ vn 0.577350 0.577350 0.577350
 
         // printf %f output (6 decimal places)
         assert_eq!(lines[1], "v 1.234568 2.345679 3.456789");
-    }
-
-    #[test]
-    fn test_obj_read_write_compare_32() {
-        // git might change line endings as they are text files, so normalize to \n
-        let obj_data = include_str!("../testdata/screw_f32.obj").replace("\r\n", "\n");
-        let cursor = Cursor::new(&obj_data);
-        // Default full-precision writer is enough to round-trip the test fixture.
-        let writer: IoObjWriter<_, f32> = IoObjWriter::new(Vec::new());
-        let mut reader = WritingReader32 { writer };
-        read_obj_file(cursor, &mut reader).unwrap();
-
-        let output = String::from_utf8(reader.writer.out).unwrap();
-        assert_eq!(output, obj_data);
-    }
-
-    #[test]
-    fn f32_reader_can_read_f64_obj() {
-        let obj_data = include_str!("../testdata/screw_f64.obj");
-        let cursor = Cursor::new(obj_data);
-        let mut test_reader: TestObjReader32 = Default::default();
-        read_obj_file(cursor, &mut test_reader).unwrap();
-        // just check that some data was read
-        assert_eq!(test_reader.vertices.len(), 41);
-        assert_eq!(test_reader.texture_coordinates.len(), 41);
-        assert_eq!(test_reader.normals.len(), 41);
     }
 
     // Tests for the standard auxiliary directives:
