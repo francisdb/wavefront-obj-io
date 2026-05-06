@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/francisdb/wavefront-obj-io/compare/v0.1.1...v0.2.0) - 2026-05-06
+
+### Added
+
+- add MTL reader/writer trait pair ([#3](https://github.com/francisdb/wavefront-obj-io/pull/3))
+
+### Other
+
+- *(deps)* [**breaking**] bump itoa to 1.0.18
+
 ## [0.1.1](https://github.com/francisdb/wavefront-obj-io/compare/v0.1.0...v0.1.1) - 2026-05-05
 
 ### Other
