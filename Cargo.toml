@@ -15,7 +15,7 @@ categories = ["parser-implementations", "encoding", "graphics"]
 all-features = true
 
 [dependencies]
-itoa = "1.0.15"
+itoa = "1.0.18"
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"
