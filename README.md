@@ -3,8 +3,8 @@
 [![Crates.io](https://img.shields.io/crates/v/wavefront-obj-io.svg)](https://crates.io/crates/wavefront-obj-io)
 [![Docs.rs](https://docs.rs/wavefront-obj-io/badge.svg)](https://docs.rs/wavefront-obj-io)
 
-Streaming, callback-based Wavefront OBJ reader and writer in Rust. For
-round-trip pipelines and large files.
+Streaming, callback-based Wavefront OBJ and MTL reader and writer in Rust.
+For round-trip pipelines and large files.
 
 ## When to use this crate
 
@@ -51,8 +51,11 @@ assert_eq!(counter.0, 3);
 
 - Streaming, SAX-style callback API on `ObjReader` / `ObjWriter` traits.
 - Configurable float precision (`f32` or `f64`) via the `ObjFloat` generic.
-- Standard directive coverage: `v`, `vt`, `vn`, `f`, `o`, `#`, `mtllib`,
+- Standard OBJ directive coverage: `v`, `vt`, `vn`, `f`, `o`, `#`, `mtllib`,
   `usemtl`, `g`, `s`, `l`, `p`.
+- MTL directive coverage: `newmtl`, `Ka`, `Kd`, `Ks`, `Ke`, `Ns`, `Ni`,
+  `d`, `Tr`, `illum`, and the `map_*` / `bump` / `disp` / `decal` / `refl`
+  texture-map family.
 - Strict-by-default `read_unknown` callback - opt in to lenient parsing
   for NURBS / display / vendor directives.
 - Typed `ObjError` with structured `ParseErrorKind` for pattern-matching;
