@@ -52,7 +52,7 @@ jobs:
           targets: wasm32-wasip1
       - uses: Swatinem/rust-cache@v2.9.1
       - name: Install wasmtime
-        uses: taiki-e/install-action@v2
+        uses: taiki-e/install-action@v2.85.6
         with:
           tool: wasmtime
       - name: Run WASM tests
