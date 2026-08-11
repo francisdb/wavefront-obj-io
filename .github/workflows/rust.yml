@@ -34,7 +34,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-      - uses: Swatinem/rust-cache@v2.9.1
+      - uses: Swatinem/rust-cache@v2.9.2
       - name: Build
         run: cargo build --locked
       - name: Run tests
@@ -50,7 +50,7 @@ jobs:
         with:
           toolchain: stable
           targets: wasm32-wasip1
-      - uses: Swatinem/rust-cache@v2.9.1
+      - uses: Swatinem/rust-cache@v2.9.2
       - name: Install wasmtime
         uses: taiki-e/install-action@v2
         with:
@@ -68,7 +68,7 @@ jobs:
         with:
           toolchain: stable
           targets: wasm32-unknown-unknown
-      - uses: Swatinem/rust-cache@v2.9.1
+      - uses: Swatinem/rust-cache@v2.9.2
       - name: Build for wasm32-unknown-unknown
         run: cargo build --locked --target wasm32-unknown-unknown
 
@@ -83,7 +83,7 @@ jobs:
         with:
           toolchain: stable
           components: rustfmt, clippy
-      - uses: Swatinem/rust-cache@v2.9.1
+      - uses: Swatinem/rust-cache@v2.9.2
       - name: Run Clippy
         run: cargo clippy --locked --color always --all-targets --all-features
       - name: Run fmt check
@@ -99,6 +99,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-      - uses: Swatinem/rust-cache@v2.9.1
+      - uses: Swatinem/rust-cache@v2.9.2
       - name: Build docs
         run: cargo doc --locked --no-deps --all-features
