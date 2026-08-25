@@ -544,6 +544,27 @@ where
     Ok(())
 }
 
+/// Allocation-free decimal formatting into a line buffer, backed by
+/// `core::fmt::NumBuffer` (stable since Rust 1.98). `format_into` is an
+/// inherent method per integer type, so a private trait is needed to stay
+/// generic over the integer types we write.
+trait PushDecimal: Copy {
+    fn push_decimal(self, out: &mut Vec<u8>);
+}
+
+macro_rules! impl_push_decimal {
+    ($($t:ty),*) => {$(
+        impl PushDecimal for $t {
+            #[inline]
+            fn push_decimal(self, out: &mut Vec<u8>) {
+                let mut buf = core::fmt::NumBuffer::new();
+                out.extend_from_slice(self.format_into(&mut buf).as_bytes());
+            }
+        }
+    )*};
+}
+impl_push_decimal!(u32, usize);
+
 pub struct IoObjWriter<W: io::Write, F: ObjFloat = f64> {
     out: W,
     line_buf: Vec<u8>,
@@ -591,9 +612,8 @@ impl<W: io::Write, F: ObjFloat> IoObjWriter<W, F> {
     }
 
     #[inline]
-    fn push_u<T: itoa::Integer>(&mut self, v: T) {
-        let mut buf = itoa::Buffer::new();
-        self.push_str(buf.format(v));
+    fn push_u<T: PushDecimal>(&mut self, v: T) {
+        v.push_decimal(&mut self.line_buf);
     }
 
     #[inline]
@@ -1131,9 +1151,8 @@ impl<W: io::Write, F: ObjFloat> IoMtlWriter<W, F> {
     }
 
     #[inline]
-    fn push_u<T: itoa::Integer>(&mut self, v: T) {
-        let mut buf = itoa::Buffer::new();
-        self.push_str(buf.format(v));
+    fn push_u<T: PushDecimal>(&mut self, v: T) {
+        v.push_decimal(&mut self.line_buf);
     }
 
     #[inline]
