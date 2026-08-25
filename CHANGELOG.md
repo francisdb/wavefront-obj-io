@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0](https://github.com/francisdb/wavefront-obj-io/compare/v0.2.0...v0.3.0) - 2026-08-25
+
+### Other
+
+- *(deps)* bump actions/checkout from 6 to 7 ([#5](https://github.com/francisdb/wavefront-obj-io/pull/5))
+- *(deps)* bump Swatinem/rust-cache from 2.9.1 to 2.9.2 ([#7](https://github.com/francisdb/wavefront-obj-io/pull/7))
+- [**breaking**] replace itoa with std NumBuffer ([#8](https://github.com/francisdb/wavefront-obj-io/pull/8))
+
 ## [0.2.0](https://github.com/francisdb/wavefront-obj-io/compare/v0.1.1...v0.2.0) - 2026-05-06
 
 ### Added
