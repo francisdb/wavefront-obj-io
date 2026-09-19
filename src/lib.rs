@@ -77,7 +77,7 @@ use std::error::Error as StdError;
 use std::fmt;
 use std::fmt::Display;
 use std::io;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write as _};
 use std::str::FromStr;
 
 /// Error type returned by [`read_obj_file`].
@@ -618,17 +618,14 @@ impl<W: io::Write, F: ObjFloat> IoObjWriter<W, F> {
 
     #[inline]
     fn push_f(&mut self, v: F) {
-        // we want 0 as "0" not "0.0"
-        if v.is_zero_fract() {
-            self.push_str(&format!("{}", v));
-            return;
-        }
-        // 6 decimal places when matching C `printf %f`, otherwise full
+        // Formats straight into the line buffer; writing to a Vec cannot
+        // fail. Whole numbers are written as "0" not "0.0", otherwise 6
+        // decimal places when matching C `printf %f`, or full
         // round-trippable precision via the type's Display impl.
-        if self.printf_f_format {
-            self.push_str(&format!("{:.6}", v));
+        if self.printf_f_format && !v.is_zero_fract() {
+            let _ = write!(self.line_buf, "{:.6}", v);
         } else {
-            self.push_str(&format!("{}", v));
+            let _ = write!(self.line_buf, "{}", v);
         }
     }
 
@@ -1157,7 +1154,8 @@ impl<W: io::Write, F: ObjFloat> IoMtlWriter<W, F> {
 
     #[inline]
     fn push_f(&mut self, v: F) {
-        self.push_str(&format!("{}", v));
+        // formats straight into the line buffer; writing to a Vec cannot fail
+        let _ = write!(self.line_buf, "{}", v);
     }
 
     #[inline]
