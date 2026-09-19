@@ -191,6 +191,18 @@ pub trait ObjFloat: Copy + Display + FromStr + PartialEq {
 
     /// Returns the zero value for this type
     fn zero() -> Self;
+
+    /// Appends the shortest text that parses back to exactly this value,
+    /// in plain decimal notation without an exponent. Whole numbers have no
+    /// fractional part, `1` not `1.0`. The default uses `Display`; `f32` and
+    /// `f64` use the faster Żmij algorithm, whose text can differ from
+    /// `Display` in the last digit when two shortest texts are equally
+    /// close, but still parses back to the same value.
+    #[doc(hidden)]
+    fn push_shortest(self, out: &mut Vec<u8>) {
+        // writing to a Vec cannot fail
+        let _ = write!(out, "{self}");
+    }
 }
 
 impl ObjFloat for f32 {
@@ -200,6 +212,13 @@ impl ObjFloat for f32 {
     fn zero() -> Self {
         0.0
     }
+    fn push_shortest(self, out: &mut Vec<u8>) {
+        if self.is_finite() {
+            push_plain_decimal(zmij::Buffer::new().format_finite(self), out);
+        } else {
+            let _ = write!(out, "{self}");
+        }
+    }
 }
 
 impl ObjFloat for f64 {
@@ -208,6 +227,64 @@ impl ObjFloat for f64 {
     }
     fn zero() -> Self {
         0.0
+    }
+    fn push_shortest(self, out: &mut Vec<u8>) {
+        if self.is_finite() {
+            push_plain_decimal(zmij::Buffer::new().format_finite(self), out);
+        } else {
+            let _ = write!(out, "{self}");
+        }
+    }
+}
+
+/// Appends `text`, the shortest text of a finite float as Żmij writes it,
+/// in the plain decimal notation `Display` uses: no exponent and no `.0`
+/// on whole numbers.
+fn push_plain_decimal(text: &str, out: &mut Vec<u8>) {
+    let bytes = text.as_bytes();
+    if !bytes.iter().any(|&b| b == b'e' || b == b'E') {
+        out.extend_from_slice(bytes.strip_suffix(b".0").unwrap_or(bytes));
+        return;
+    }
+    let (negative, unsigned) = match text.strip_prefix('-') {
+        Some(rest) => (true, rest),
+        None => (false, text),
+    };
+    let (mantissa, exponent) = match unsigned.find(['e', 'E']) {
+        Some(i) => (
+            &unsigned[..i],
+            unsigned[i + 1..].parse::<i32>().unwrap_or_default(),
+        ),
+        None => (unsigned, 0),
+    };
+    let (int_part, frac_part) = mantissa.split_once('.').unwrap_or((mantissa, ""));
+    // the significant digits, and where the decimal point sits among them
+    let all_digits: Vec<u8> = int_part.bytes().chain(frac_part.bytes()).collect();
+    let leading_zeros = all_digits.iter().take_while(|&&b| b == b'0').count();
+    let digits = &all_digits[leading_zeros..];
+    let trailing_zeros = digits.iter().rev().take_while(|&&b| b == b'0').count();
+    let digits = &digits[..digits.len() - trailing_zeros];
+    let point = int_part.len() as i32 + exponent - leading_zeros as i32;
+    if negative {
+        out.push(b'-');
+    }
+    if digits.is_empty() {
+        out.push(b'0');
+        return;
+    }
+    let len = digits.len() as i32;
+    if point <= 0 {
+        out.extend_from_slice(b"0.");
+        out.extend(std::iter::repeat_n(b'0', (-point) as usize));
+        out.extend_from_slice(digits);
+    } else if point >= len {
+        out.extend_from_slice(digits);
+        out.extend(std::iter::repeat_n(b'0', (point - len) as usize));
+    } else {
+        let (whole, fraction) = digits.split_at(point as usize);
+        out.extend_from_slice(whole);
+        out.push(b'.');
+        out.extend_from_slice(fraction);
     }
 }
 
@@ -620,12 +697,12 @@ impl<W: io::Write, F: ObjFloat> IoObjWriter<W, F> {
     fn push_f(&mut self, v: F) {
         // Formats straight into the line buffer; writing to a Vec cannot
         // fail. Whole numbers are written as "0" not "0.0", otherwise 6
-        // decimal places when matching C `printf %f`, or full
-        // round-trippable precision via the type's Display impl.
+        // decimal places when matching C `printf %f`, or the shortest text
+        // that parses back to the same value.
         if self.printf_f_format && !v.is_zero_fract() {
             let _ = write!(self.line_buf, "{:.6}", v);
         } else {
-            let _ = write!(self.line_buf, "{}", v);
+            v.push_shortest(&mut self.line_buf);
         }
     }
 
@@ -1154,8 +1231,7 @@ impl<W: io::Write, F: ObjFloat> IoMtlWriter<W, F> {
 
     #[inline]
     fn push_f(&mut self, v: F) {
-        // formats straight into the line buffer; writing to a Vec cannot fail
-        let _ = write!(self.line_buf, "{}", v);
+        v.push_shortest(&mut self.line_buf);
     }
 
     #[inline]
@@ -1251,6 +1327,59 @@ impl<W: io::Write, F: ObjFloat> MtlWriter<F> for IoMtlWriter<W, F> {
 
 #[cfg(test)]
 mod tests {
+    fn shortest<F: super::ObjFloat>(v: F) -> String {
+        let mut out = Vec::new();
+        v.push_shortest(&mut out);
+        String::from_utf8(out).unwrap()
+    }
+
+    #[test]
+    fn shortest_is_plain_decimal() {
+        assert_eq!(shortest(1.0f32), "1");
+        assert_eq!(shortest(-0.0f32), "-0");
+        assert_eq!(shortest(0.0f64), "0");
+        assert_eq!(shortest(0.1f32), "0.1");
+        assert_eq!(shortest(-2.5f64), "-2.5");
+        assert_eq!(shortest(1e-7f32), "0.0000001");
+        assert_eq!(shortest(1.5e-5f64), "0.000015");
+        assert_eq!(shortest(1e20f32), "100000000000000000000");
+        assert_eq!(shortest(123456.78f64), "123456.78");
+        assert_eq!(shortest(f32::NAN), "NaN");
+        assert_eq!(shortest(f64::NEG_INFINITY), "-inf");
+    }
+
+    #[test]
+    fn shortest_parses_back_to_the_same_value() {
+        // xorshift over bit patterns, which covers every exponent
+        let mut x = 0x9E37_79B9_7F4A_7C15u64;
+        for _ in 0..200_000 {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            for v in [f64::from_bits(x), f64::from(f32::from_bits(x as u32))] {
+                if v.is_nan() {
+                    continue;
+                }
+                let text = shortest(v);
+                assert!(!text.contains(['e', 'E']), "{text}");
+                assert_eq!(
+                    text.parse::<f64>().unwrap().to_bits(),
+                    v.to_bits(),
+                    "{text}"
+                );
+            }
+            let v = f32::from_bits(x as u32);
+            if !v.is_nan() {
+                let text = shortest(v);
+                assert_eq!(
+                    text.parse::<f32>().unwrap().to_bits(),
+                    v.to_bits(),
+                    "{text}"
+                );
+            }
+        }
+    }
+
     use super::*;
     use pretty_assertions::assert_eq;
     use std::io::Cursor;
