@@ -15,5 +15,8 @@ categories = ["parser-implementations", "encoding", "graphics"]
 [package.metadata.docs.rs]
 all-features = true
 
+[dependencies]
+zmij = "1.0.23"
+
 [dev-dependencies]
 pretty_assertions = "1.4.1"
